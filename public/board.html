@@ -92,19 +92,27 @@
     background: linear-gradient(90deg, var(--tcolor, var(--lime)), transparent 70%);
   }
   .cell.full { opacity: .45; }
-  .c-id {
-    font-family: var(--font-num); font-weight: 300; font-size: clamp(17px, 2.6vw, 36px);
-    color: var(--tcolor); line-height: 1; letter-spacing: -.01em;
-    flex: 0 0 auto;
+  .c-badge {
+    position: absolute; top: clamp(6px, 0.9vw, 12px); right: clamp(6px, 0.9vw, 12px);
+    width: clamp(18px, 2.1vw, 26px); height: clamp(18px, 2.1vw, 26px);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--tcolor) 12%, transparent);
+    border: 1px solid var(--tcolor);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-m); font-weight: 700; font-size: clamp(8px, 0.75vw, 11px);
+    color: var(--tcolor); letter-spacing: .02em;
   }
+  .cell.full .c-badge { background: rgba(255,255,255,.04); border-color: #3a423a; color: #6b756b; }
   .c-title {
     font-family: var(--font-d); font-size: clamp(8px, 0.9vw, 13px); font-weight: 600;
     line-height: 1.25; height: calc(1.25em * 2);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     flex: 0 0 auto; color: var(--text-dim);
+    padding-right: clamp(22px, 2.8vw, 32px);
   }
-  .c-nums { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; flex: 0 0 auto; }
+  .c-nums { display: flex; align-items: baseline; gap: clamp(6px, 0.8vw, 10px); margin-top: auto; flex: 0 0 auto; }
   .c-left { font-family: var(--font-d); font-size: clamp(14px, 1.9vw, 28px); font-weight: 800; color: var(--tcolor); }
+  .cell.full .c-left { color: var(--danger); }
   .c-of { font-family: var(--font-m); font-size: clamp(8px, 0.8vw, 12px); color: var(--text-mute); }
   .c-meter { height: clamp(3px,0.35vw,6px); border-radius: 3px; background: rgba(0,0,0,.35); overflow: hidden; }
   .c-meter > div { height: 100%; background: var(--tcolor); }
@@ -179,7 +187,7 @@
       cell.style.setProperty("--tcolor", trackColor[c.track] || "#c7f54a");
       const pct = Math.min(100, Math.round((c.taken / c.limit) * 100));
       cell.innerHTML =
-        '<span class="c-id">' + c.id + "</span>" +
+        '<div class="c-badge">' + String(c.id).padStart(2, "0") + "</div>" +
         '<div class="c-title">' + escapeHtml(c.title) + "</div>" +
         '<div class="c-nums"><span class="c-left">' + (c.full ? "0" : c.left) +
         '</span><span class="c-of">своб. из ' + c.limit + "</span></div>" +
