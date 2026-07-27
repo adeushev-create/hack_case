@@ -73,8 +73,35 @@ function publicState() {
 const clean = (v, max = 200) =>
   String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
 
+// ---------- Rate limit (без внешних зависимостей) ----------
+// Railway кладёт приложение за прокси — без этого все запросы выглядят
+// так, будто пришли с одного и того же внутреннего IP, и лимит сломает всех разом.
+function rateLimiter({ windowMs, max }) {
+  const hits = new Map(); // ip -> { count, resetAt }
+  return (req, res, next) => {
+    const ip = req.ip || "unknown";
+    const now = Date.now();
+    let entry = hits.get(ip);
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + windowMs };
+      hits.set(ip, entry);
+    }
+    entry.count++;
+    if (entry.count > max) {
+      return res.status(429).json({ error: "Слишком много попыток. Подождите немного и повторите." });
+    }
+    next();
+  };
+}
+// Пишем в записи не чаще ~20 раз в минуту с одного IP — не мешает толпе за
+// одним NAT (Wi-Fi офиса), но режет скрипт, который долбит регистрацию.
+const signupLimiter = rateLimiter({ windowMs: 60_000, max: 20 });
+// Админку защищаем от перебора токена — 60 запросов в минуту с лихвой хватает на реальную работу.
+const adminLimiter = rateLimiter({ windowMs: 60_000, max: 60 });
+
 // ---------- Приложение ----------
 const app = express();
+app.set("trust proxy", true);
 app.disable("x-powered-by");
 app.use(express.json({ limit: "10kb" }));
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "1m" }));
@@ -92,7 +119,7 @@ app.get("/api/teams", (req, res) => {
 });
 
 // Запись команды
-app.post("/api/signup", (req, res) => {
+app.post("/api/signup", signupLimiter, (req, res) => {
   const tableRaw = req.body.table;
   const table = Number.parseInt(tableRaw, 10);
   const captain = clean(req.body.captain, 100);
@@ -154,6 +181,8 @@ function checkToken(req, res) {
   }
   return true;
 }
+
+app.use(["/api/admin", "/api/export.csv"], adminLimiter);
 
 app.get("/api/admin/data", (req, res) => {
   if (!checkToken(req, res)) return;
