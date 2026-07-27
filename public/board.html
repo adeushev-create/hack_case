@@ -165,7 +165,7 @@
 
     const grid = $("#grid");
     grid.innerHTML = "";
-    for (const c of state.cases.slice().sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const c of state.cases.slice().sort((a, b) => Number(a.id) - Number(b.id))) {
       const cell = document.createElement("div");
       cell.className = "cell" + (c.full ? " full" : "");
       cell.style.setProperty("--tcolor", trackColor[c.track] || "#c7f54a");
