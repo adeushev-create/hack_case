@@ -14,10 +14,10 @@ const event = {
 };
 
 const tracks = [
-  { id: "product", num: "01", name: "Product", color: "#7ee787" },
-  { id: "analytics", num: "02", name: "Аналитика", color: "#58a6ff" },
-  { id: "dev", num: "03", name: "Разработка", color: "#ffa657" },
-  { id: "qa", num: "04", name: "Тестирование", color: "#d2a8ff" },
+  { id: "product", num: "01", name: "Product", color: "#c7f54a" },
+  { id: "analytics", num: "02", name: "Аналитика", color: "#5ab4ff" },
+  { id: "dev", num: "03", name: "Разработка", color: "#ff7849" },
+  { id: "qa", num: "04", name: "Тестирование", color: "#6ecf6e" },
 ];
 
 const cases = [
@@ -199,6 +199,8 @@ const cases = [
     gets: "OpenSpec, истории, БТ/СТ/НФТ, эталонное описание, эталонный скрипт и глоссарий.",
     deliver: "Skill/workflow, описание операции, исполняемый скрипт, SKILL.md, README и demo.",
   },
-].map((c) => ({ limit: DEFAULT_LIMIT, ...c }));
+].map((c, i) => ({ limit: DEFAULT_LIMIT, ...c, id: String(i + 1) }));
+// ^ нумерация кейсов сквозная (1, 2, 3…) в порядке следования в этом списке,
+//   без привязки к блоку/треку — блок определяется только полем track.
 
 module.exports = { event, tracks, cases, DEFAULT_LIMIT };

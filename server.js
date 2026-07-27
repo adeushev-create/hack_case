@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { event, tracks, cases } = require("./cases");
+const { teams } = require("./teams");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "change-me-please";
@@ -37,6 +38,7 @@ function persist() {
 
 // ---------- Помощники ----------
 const caseById = Object.fromEntries(cases.map((c) => [c.id, c]));
+const teamByTable = Object.fromEntries(teams.map((t) => [t.table, t.team]));
 
 function counts() {
   const m = {};
@@ -83,23 +85,37 @@ app.get("/api/state", (req, res) => {
   res.json(publicState());
 });
 
+// Реестр столов -> команд (для автоподстановки в форме)
+app.get("/api/teams", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ teams });
+});
+
 // Запись команды
 app.post("/api/signup", (req, res) => {
-  const team = clean(req.body.team, 100);
+  const tableRaw = req.body.table;
+  const table = Number.parseInt(tableRaw, 10);
   const captain = clean(req.body.captain, 100);
   const contact = clean(req.body.contact, 150);
   const caseId = clean(req.body.caseId, 10);
+  let team = clean(req.body.team, 100);
 
-  if (!team || !captain || !contact || !caseId) {
-    return res.status(400).json({ error: "Заполните все поля." });
+  if (!Number.isInteger(table) || table < 1 || table > 150 || !captain || !contact || !caseId) {
+    return res.status(400).json({ error: "Заполните все поля (номер стола от 1 до 150)." });
   }
   const c = caseById[caseId];
   if (!c) return res.status(400).json({ error: "Такого кейса нет." });
 
-  const teamKey = team.toLowerCase();
-  if (signups.some((s) => s.team.toLowerCase() === teamKey)) {
+  // Если стол есть в реестре — берём каноничное имя из базы, не доверяя вводу с клиента
+  if (teamByTable[table]) {
+    team = teamByTable[table];
+  } else if (!team) {
+    return res.status(400).json({ error: "Стол не найден в реестре — укажите название команды вручную." });
+  }
+
+  if (signups.some((s) => s.table === table)) {
     return res.status(409).json({
-      error: "Команда с таким названием уже записана. Одна команда — один кейс.",
+      error: "Этот стол уже записан на кейс. Одна команда — один кейс.",
     });
   }
 
@@ -112,6 +128,7 @@ app.post("/api/signup", (req, res) => {
   const rec = {
     id: crypto.randomUUID(),
     caseId,
+    table,
     team,
     captain,
     contact,
@@ -125,7 +142,7 @@ app.post("/api/signup", (req, res) => {
     console.error("Ошибка записи на диск:", e);
     return res.status(500).json({ error: "Ошибка сервера, попробуйте ещё раз." });
   }
-  res.json({ ok: true, caseTitle: c.title, left: c.limit - taken - 1 });
+  res.json({ ok: true, caseTitle: c.title, team, left: c.limit - taken - 1 });
 });
 
 // ---------- Админка ----------
@@ -157,13 +174,14 @@ app.get("/api/export.csv", (req, res) => {
   if (!checkToken(req, res)) return;
   const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const rows = [
-    ["Кейс", "Название кейса", "Команда", "Капитан", "Контакт", "Время записи"],
+    ["Кейс", "Название кейса", "№ стола", "Команда", "Капитан", "Контакт", "Время записи"],
     ...signups
       .slice()
-      .sort((a, b) => a.caseId.localeCompare(b.caseId) || a.createdAt.localeCompare(b.createdAt))
+      .sort((a, b) => Number(a.caseId) - Number(b.caseId) || a.createdAt.localeCompare(b.createdAt))
       .map((s) => [
         s.caseId,
         caseById[s.caseId] ? caseById[s.caseId].title : "?",
+        s.table ?? "",
         s.team,
         s.captain,
         s.contact,
