@@ -4,51 +4,65 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Табло — кейсы хакатона</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
-    --bg: #05070c;
-    --stage: #0d1117;
-    --panel: #161b22;
-    --panel2: #1c2129;
-    --border: #2d333b;
-    --text: #e6edf3;
-    --muted: #8b949e;
-    --accent: #7ee787;
-    --danger: #f85149;
+    --bg:          #080c08;
+    --stage:       #0f140f;
+    --panel:       #0f140f;
+    --panel2:      #161d16;
+    --border:      #222b21;
+    --text:        #e4ece2;
+    --text-dim:    #8fa08f;
+    --text-mute:   #7d8d7d;
+    --lime:        #c7f54a;
+    --lime-rgb:    199,245,74;
+    --danger:      #ff5a5a;
+    --font-d: 'Unbounded','SF Pro Display','Helvetica Neue',Arial,sans-serif;
+    --font-b: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-m: 'SF Mono','Cascadia Code',Consolas,'Courier New',monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); overflow: hidden; }
+  html, body { height: 100%; background: #000; overflow: hidden; }
   body {
     display: flex; align-items: center; justify-content: center;
-    font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
+    font-family: var(--font-b);
     color: var(--text);
   }
 
-  /* Летербокс 16:9 — подстраивается и под широкие, и под высокие экраны */
   .stage {
     aspect-ratio: 16 / 9;
     width: 100vw; height: 100vh;
     background: var(--stage);
+    position: relative; overflow: hidden;
     display: flex; flex-direction: column;
     padding: clamp(14px, 1.6vw, 32px);
     gap: clamp(10px, 1.2vw, 22px);
   }
-  @media (min-aspect-ratio: 16/9) {
-    .stage { width: auto; }
+  .stage::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 8% 0%, rgba(var(--lime-rgb),.09), transparent),
+      radial-gradient(ellipse 55% 55% at 92% 100%, rgba(255,120,73,.07), transparent);
   }
-  @media (max-aspect-ratio: 16/9) {
-    .stage { height: auto; }
-  }
+  @media (min-aspect-ratio: 16/9) { .stage { width: auto; } }
+  @media (max-aspect-ratio: 16/9) { .stage { height: auto; } }
 
-  .head { display: flex; align-items: flex-start; justify-content: space-between; flex: 0 0 auto; }
-  .h-title { font-size: clamp(18px, 2.4vw, 34px); font-weight: 700; letter-spacing: -0.3px; }
-  .h-sub { font-size: clamp(10px, 1vw, 15px); color: var(--muted); margin-top: 6px; max-width: 60vw; }
-  .h-live { display: flex; align-items: center; gap: 8px; font-size: clamp(10px, 1vw, 15px); color: var(--muted); white-space: nowrap; }
-  .dot { width: clamp(6px,0.7vw,10px); height: clamp(6px,0.7vw,10px); border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  .head { display: flex; align-items: flex-start; justify-content: space-between; flex: 0 0 auto; position: relative; z-index: 1; }
+  .h-title { font-family: var(--font-d); font-size: clamp(16px, 2.1vw, 30px); font-weight: 800; letter-spacing: -.02em; }
+  .h-title .accent { color: var(--lime); }
+  .h-sub { font-size: clamp(9px, 0.95vw, 14px); color: var(--text-dim); margin-top: 6px; max-width: 60vw; }
+  .h-live {
+    display: flex; align-items: center; gap: 8px; font-family: var(--font-m);
+    font-size: clamp(10px, 1vw, 14px); color: var(--text-mute); white-space: nowrap;
+  }
+  .dot { width: clamp(6px,0.7vw,10px); height: clamp(6px,0.7vw,10px); border-radius: 50%; background: var(--lime); box-shadow: 0 0 8px rgba(var(--lime-rgb),1); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
 
-  .body { flex: 1; display: flex; gap: clamp(10px, 1.4vw, 26px); min-height: 0; }
+  .body { flex: 1; display: flex; gap: clamp(10px, 1.4vw, 26px); min-height: 0; position: relative; z-index: 1; }
 
   .grid {
     flex: 1; min-width: 0;
@@ -59,41 +73,46 @@
   }
 
   .cell {
-    background: var(--panel); border: 1px solid var(--tcolor, var(--border));
+    background: var(--panel2); border: 1px solid var(--tcolor, var(--border));
     border-radius: clamp(6px, 0.7vw, 12px);
     padding: clamp(6px, 0.9vw, 14px);
     display: flex; flex-direction: column; gap: clamp(3px, 0.4vw, 8px);
     min-height: 0; overflow: hidden;
+    position: relative;
   }
-  .cell.full { opacity: .5; }
+  .cell::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--tcolor, var(--lime)), transparent 70%);
+  }
+  .cell.full { opacity: .45; }
   .c-id {
-    font-family: Consolas, monospace; font-size: clamp(8px, 0.85vw, 13px); font-weight: 700;
-    color: var(--tcolor); background: var(--panel2); border-radius: 5px;
-    padding: 1px 6px; width: fit-content;
+    font-family: var(--font-m); font-size: clamp(8px, 0.85vw, 13px); font-weight: 700;
+    color: var(--tcolor); background: rgba(0,0,0,.3); border-radius: 5px;
+    padding: 1px 6px; width: fit-content; letter-spacing: .04em;
   }
   .c-title {
-    font-size: clamp(9px, 1.05vw, 15px); font-weight: 600; line-height: 1.25;
+    font-family: var(--font-d); font-size: clamp(9px, 1.05vw, 15px); font-weight: 700; line-height: 1.25;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     flex: 1;
   }
   .c-nums { display: flex; align-items: baseline; justify-content: space-between; }
-  .c-left { font-size: clamp(14px, 1.9vw, 28px); font-weight: 700; color: var(--tcolor); }
-  .c-of { font-size: clamp(8px, 0.8vw, 12px); color: var(--muted); }
-  .c-meter { height: clamp(3px,0.35vw,6px); border-radius: 3px; background: var(--panel2); overflow: hidden; }
+  .c-left { font-family: var(--font-d); font-size: clamp(14px, 1.9vw, 28px); font-weight: 800; color: var(--tcolor); }
+  .c-of { font-family: var(--font-m); font-size: clamp(8px, 0.8vw, 12px); color: var(--text-mute); }
+  .c-meter { height: clamp(3px,0.35vw,6px); border-radius: 3px; background: rgba(0,0,0,.35); overflow: hidden; }
   .c-meter > div { height: 100%; background: var(--tcolor); }
   .cell.full .c-meter > div { background: var(--danger); }
-  .c-full-tag { font-size: clamp(8px,0.8vw,12px); font-weight: 700; color: var(--danger); text-align: center; }
+  .c-full-tag { font-family: var(--font-m); font-size: clamp(8px,0.8vw,12px); font-weight: 700; color: var(--danger); text-align: center; letter-spacing: .06em; }
 
   .qr-panel {
     flex: 0 0 clamp(120px, 15vw, 260px);
-    background: var(--panel); border: 1px solid var(--border); border-radius: clamp(8px,1vw,16px);
+    background: var(--panel2); border: 1px solid var(--border); border-radius: clamp(8px,1vw,16px);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px,1vw,16px);
     padding: clamp(8px, 1vw, 18px);
     text-align: center;
   }
   #qrcode { background: #fff; padding: clamp(6px,0.8vw,12px); border-radius: 10px; line-height: 0; }
-  .qr-text { font-size: clamp(10px, 1.1vw, 16px); font-weight: 600; line-height: 1.35; }
-  .qr-url { font-size: clamp(8px, 0.85vw, 12px); color: var(--muted); word-break: break-all; }
+  .qr-text { font-family: var(--font-d); font-size: clamp(10px, 1.1vw, 16px); font-weight: 700; line-height: 1.35; }
+  .qr-url { font-family: var(--font-m); font-size: clamp(8px, 0.85vw, 12px); color: var(--text-mute); word-break: break-all; }
 </style>
 </head>
 <body>
@@ -121,7 +140,7 @@
   document.getElementById("qr-url").textContent = url.replace(/^https?:\/\//, "");
   new QRCode(document.getElementById("qrcode"), {
     text: url, width: 160, height: 160,
-    colorDark: "#0d1117", colorLight: "#ffffff",
+    colorDark: "#080c08", colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.M,
   });
 
@@ -138,7 +157,7 @@
 
   function render(state) {
     if (state.event) {
-      $("#ev-title").textContent = state.event.title;
+      $("#ev-title").innerHTML = 'Кейсы <span class="accent">хакатона</span>';
       $("#ev-sub").textContent = "Отклик команды блокирует кейс — свободные места видно в реальном времени";
     }
     for (const t of state.tracks) trackColor[t.id] = t.color;
@@ -149,7 +168,7 @@
     for (const c of state.cases.slice().sort((a, b) => a.id.localeCompare(b.id))) {
       const cell = document.createElement("div");
       cell.className = "cell" + (c.full ? " full" : "");
-      cell.style.setProperty("--tcolor", trackColor[c.track] || "#8b949e");
+      cell.style.setProperty("--tcolor", trackColor[c.track] || "#c7f54a");
       const pct = Math.min(100, Math.round((c.taken / c.limit) * 100));
       cell.innerHTML =
         '<span class="c-id">' + c.id + "</span>" +
