@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Выбор кейсов — Хакатон</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c2129;
+    --border: #2d333b;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #7ee787;
+    --danger: #f85149;
+    --warn: #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 20px 80px; }
+  header { margin-bottom: 8px; }
+  h1 { font-size: 32px; letter-spacing: -0.5px; }
+  .sub { color: var(--muted); margin-top: 8px; font-size: 15px; line-height: 1.5; }
+  .stats {
+    display: flex; gap: 16px; margin: 20px 0 28px; flex-wrap: wrap;
+    font-size: 13px; color: var(--muted);
+  }
+  .stats b { color: var(--text); font-size: 15px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; }
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--accent); margin-right:6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+  .track { margin-top: 36px; }
+  .track-head {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--tcolor, var(--border));
+    margin-bottom: 16px;
+  }
+  .track-num {
+    font-family: "Consolas", monospace; font-size: 12px; font-weight: 700;
+    color: #0d1117; background: var(--tcolor); border-radius: 6px; padding: 3px 8px;
+  }
+  .track-name { font-size: 20px; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px; display: flex; flex-direction: column; gap: 10px;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:not(.full):hover { border-color: var(--tcolor); transform: translateY(-2px); }
+  .card.full { opacity: .55; }
+  .case-id {
+    font-family: "Consolas", monospace; font-size: 12px; font-weight: 700;
+    color: var(--tcolor); background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 8px; width: fit-content;
+  }
+  .case-title { font-size: 16px; font-weight: 600; line-height: 1.35; }
+  .case-short {
+    font-size: 13px; color: var(--muted); line-height: 1.5; flex: 1;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .case-link {
+    font-size: 12px; color: var(--tcolor); background: none; border: none; cursor: pointer;
+    text-align: left; padding: 0; width: fit-content;
+  }
+  .case-link:hover { text-decoration: underline; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  .meter { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
+  .meter > div { height: 100%; border-radius: 3px; background: var(--tcolor); transition: width .4s; }
+  .meter.warn > div { background: var(--warn); }
+  .meter.full > div { background: var(--danger); }
+  .slots { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .slots b { color: var(--text); }
+
+  .btn {
+    appearance: none; border: none; cursor: pointer; border-radius: 9px;
+    padding: 10px 14px; font-size: 14px; font-weight: 600;
+    background: var(--tcolor, var(--accent)); color: #0d1117;
+    transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn[disabled] { background: var(--panel2); color: var(--muted); cursor: not-allowed; }
+  .badge-full {
+    font-size: 12px; font-weight: 700; color: var(--danger);
+    border: 1px solid var(--danger); border-radius: 6px; padding: 6px 10px; text-align: center;
+  }
+
+  /* Модалка */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(1,4,9,.75); display: none;
+    align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    width: 100%; max-width: 460px; padding: 26px;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 4px; }
+  .modal .mcase { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .field input {
+    width: 100%; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--text); padding: 11px 12px; font-size: 14px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .mrow { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-ghost {
+    flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 9px; padding: 10px; font-size: 14px; cursor: pointer;
+  }
+  .btn-submit { flex: 2; background: var(--accent); }
+  .msg { margin-top: 12px; font-size: 13px; line-height: 1.4; display: none; border-radius: 8px; padding: 10px 12px; }
+  .msg.err { display: block; color: var(--danger); background: rgba(248,81,73,.1); }
+  .msg.ok { display: block; color: var(--accent); background: rgba(126,231,135,.1); }
+  footer { margin-top: 60px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  /* Модалка деталей кейса */
+  .detail-modal { max-width: 600px; max-height: 82vh; overflow-y: auto; }
+  .detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .detail-section { margin-top: 18px; }
+  .detail-section h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px;
+  }
+  .detail-section p { font-size: 14px; line-height: 1.6; }
+  .detail-slots { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .close-x {
+    margin-left: auto; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="ev-title">Выбор кейсов хакатона</h1>
+    <p class="sub" id="ev-subtitle">Загрузка…</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><span class="live-dot"></span>Обновлено: <b id="st-upd">—</b></div>
+    <div class="stat">Команд записано: <b id="st-total">0</b></div>
+    <div class="stat">Кейсов открыто: <b id="st-open">0</b></div>
+  </div>
+
+  <div id="tracks"></div>
+
+  <footer>Страница обновляет статус мест каждые 3 секунды.</footer>
+</div>
+
+<!-- Модалка записи -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Запись на кейс</h2>
+    <div class="mcase" id="m-case"></div>
+    <form id="form">
+      <div class="field">
+        <label>Название команды *</label>
+        <input name="team" maxlength="100" required placeholder="Например: Космические еноты" />
+      </div>
+      <div class="field">
+        <label>Капитан (ФИО) *</label>
+        <input name="captain" maxlength="100" required placeholder="Иванов Иван" />
+      </div>
+      <div class="field">
+        <label>Контакт (Telegram или e-mail) *</label>
+        <input name="contact" maxlength="150" required placeholder="@username или mail@example.com" />
+      </div>
+      <div class="msg" id="msg"></div>
+      <div class="mrow">
+        <button type="button" class="btn-ghost" id="btn-cancel">Отмена</button>
+        <button type="submit" class="btn btn-submit" id="btn-submit">Записаться</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Модалка деталей кейса -->
+<div class="overlay" id="detail-overlay">
+  <div class="modal detail-modal" id="detail-modal">
+    <div class="detail-head">
+      <span class="case-id" id="d-id"></span>
+      <button class="close-x" id="d-close">×</button>
+    </div>
+    <h2 id="d-title"></h2>
+    <div class="detail-slots" id="d-slots"></div>
+
+    <div class="detail-section">
+      <h3>Рабочая ситуация</h3>
+      <p id="d-situation"></p>
+    </div>
+    <div class="detail-section">
+      <h3>Задача команды</h3>
+      <p id="d-task"></p>
+    </div>
+    <div class="detail-section">
+      <h3>Что получает команда</h3>
+      <p id="d-gets"></p>
+    </div>
+    <div class="detail-section">
+      <h3>Что нужно сдать</h3>
+      <p id="d-deliver"></p>
+    </div>
+
+    <div class="mrow">
+      <button type="button" class="btn-ghost" id="d-close2">Закрыть</button>
+      <button type="button" class="btn btn-submit" id="d-signup">Записаться</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let state = null;
+  let selectedCase = null;
+
+  const $ = (s) => document.querySelector(s);
+
+  async function load() {
+    try {
+      const r = await fetch("/api/state", { cache: "no-store" });
+      state = await r.json();
+      render();
+    } catch (e) { /* тихо переживаем сбой сети, следующий поллинг починит */ }
+  }
+
+  function render() {
+    if (!state) return;
+    if (state.event) {
+      $("#ev-title").textContent = state.event.title;
+      $("#ev-subtitle").textContent = state.event.subtitle;
+    }
+    $("#st-total").textContent = state.totalTeams;
+    $("#st-open").textContent =
+      state.cases.filter((c) => !c.full).length + " из " + state.cases.length;
+    $("#st-upd").textContent = new Date(state.updatedAt).toLocaleTimeString("ru-RU");
+
+    const host = $("#tracks");
+    host.innerHTML = "";
+    for (const t of state.tracks) {
+      const cs = state.cases.filter((c) => c.track === t.id);
+      if (!cs.length) continue;
+      const sec = document.createElement("section");
+      sec.className = "track";
+      sec.style.setProperty("--tcolor", t.color);
+      sec.innerHTML =
+        '<div class="track-head"><span class="track-num">' + t.num +
+        '</span><span class="track-name">' + t.name + "</span></div>";
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      for (const c of cs) grid.appendChild(card(c, t));
+      sec.appendChild(grid);
+      host.appendChild(sec);
+    }
+  }
+
+  function card(c, t) {
+    const d = document.createElement("div");
+    d.className = "card" + (c.full ? " full" : "");
+    d.style.setProperty("--tcolor", t.color);
+    const pct = Math.min(100, Math.round((c.taken / c.limit) * 100));
+    const meterCls = c.full ? "full" : (c.left <= 3 ? "warn" : "");
+    d.innerHTML =
+      '<span class="case-id">' + c.id + "</span>" +
+      '<div class="case-title">' + escapeHtml(c.title) + "</div>" +
+      '<div class="case-short">' + escapeHtml(c.situation) + "</div>" +
+      '<button type="button" class="case-link">Подробнее →</button>' +
+      '<div class="meter ' + meterCls + '"><div style="width:' + pct + '%"></div></div>' +
+      '<div class="slots"><span>Занято: <b>' + c.taken + " / " + c.limit +
+      "</b></span><span>Свободно: <b>" + c.left + "</b></span></div>";
+    d.querySelector(".case-link").onclick = () => openDetail(c);
+    if (c.full) {
+      const b = document.createElement("div");
+      b.className = "badge-full";
+      b.textContent = "Запись закрыта";
+      d.appendChild(b);
+    } else {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = "Записаться";
+      b.onclick = () => openModal(c);
+      d.appendChild(b);
+    }
+    return d;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  }
+
+  function openModal(c) {
+    selectedCase = c;
+    $("#m-case").textContent = c.id + " · " + c.title;
+    $("#msg").className = "msg";
+    $("#form").reset();
+    $("#overlay").classList.add("open");
+  }
+  function closeModal() { $("#overlay").classList.remove("open"); }
+
+  $("#btn-cancel").onclick = closeModal;
+  $("#overlay").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeModal(); });
+
+  function openDetail(c) {
+    $("#d-id").textContent = c.id;
+    $("#d-title").textContent = c.title;
+    $("#d-slots").textContent =
+      "Занято " + c.taken + " из " + c.limit + " · Свободно: " + c.left +
+      (c.full ? " · запись закрыта" : "");
+    $("#d-situation").textContent = c.situation;
+    $("#d-task").textContent = c.task;
+    $("#d-gets").textContent = c.gets;
+    $("#d-deliver").textContent = c.deliver;
+    const signupBtn = $("#d-signup");
+    signupBtn.style.display = c.full ? "none" : "block";
+    signupBtn.onclick = () => { closeDetail(); openModal(c); };
+    $("#detail-overlay").classList.add("open");
+  }
+  function closeDetail() { $("#detail-overlay").classList.remove("open"); }
+  $("#d-close").onclick = closeDetail;
+  $("#d-close2").onclick = closeDetail;
+  $("#detail-overlay").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeDetail(); });
+
+  $("#form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const btn = $("#btn-submit");
+    btn.disabled = true; btn.textContent = "Отправляем…";
+    const msg = $("#msg");
+    try {
+      const r = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.id,
+          team: f.team.value,
+          captain: f.captain.value,
+          contact: f.contact.value,
+        }),
+      });
+      const j = await r.json();
+      if (r.ok) {
+        msg.className = "msg ok";
+        msg.textContent = "Готово! Команда записана на кейс «" + j.caseTitle + "».";
+        setTimeout(closeModal, 1800);
+      } else {
+        msg.className = "msg err";
+        msg.textContent = j.error || "Что-то пошло не так.";
+      }
+    } catch {
+      msg.className = "msg err";
+      msg.textContent = "Сеть недоступна, попробуйте ещё раз.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Записаться";
+      load();
+    }
+  });
+
+  load();
+  setInterval(load, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Админка — записи на кейсы</title>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#2d333b;
+    --text:#e6edf3; --muted:#8b949e; --accent:#7ee787; --danger:#f85149;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:"Segoe UI",-apple-system,Roboto,Arial,sans-serif; }
+  .wrap { max-width:1240px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:26px; }
+  .bar { display:flex; gap:12px; margin:20px 0; flex-wrap:wrap; align-items:center; }
+  .btn {
+    border:none; cursor:pointer; border-radius:9px; padding:10px 16px;
+    font-size:14px; font-weight:600; background:var(--accent); color:#0d1117; text-decoration:none;
+  }
+  .btn:hover { filter:brightness(1.1); }
+  .muted { color:var(--muted); font-size:13px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; margin-bottom:28px; }
+  .c { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font-size:13px; }
+  .c b { font-size:15px; }
+  .c .full { color:var(--danger); font-weight:700; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  th, td { text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--border); }
+  th { background:var(--panel2); color:var(--muted); font-weight:600; position:sticky; top:0; }
+  tr:hover td { background:var(--panel2); }
+  .del { color:var(--danger); background:none; border:none; cursor:pointer; font-size:13px; }
+  #auth { max-width:380px; margin:80px auto; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:26px; }
+  #auth input { width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:9px; color:var(--text); padding:11px; font-size:14px; margin:14px 0; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="auth" class="hidden">
+    <h1>Админка</h1>
+    <p class="muted" style="margin-top:8px">Введите админ-токен (задаётся переменной окружения ADMIN_TOKEN).</p>
+    <input id="token-input" type="password" placeholder="Токен" />
+    <button class="btn" onclick="saveToken()">Войти</button>
+  </div>
+
+  <div id="main" class="hidden">
+    <h1>Записи на кейсы</h1>
+    <div class="bar">
+      <a class="btn" id="csv-link" href="#">Скачать CSV</a>
+      <button class="btn" style="background:var(--panel2);color:var(--text)" onclick="load()">Обновить</button>
+      <span class="muted" id="summary"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <table>
+      <thead>
+        <tr><th>Кейс</th><th>Команда</th><th>Капитан</th><th>Контакт</th><th>Время</th><th></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let token = new URLSearchParams(location.search).get("token") || sessionStorage.getItem("admtoken") || "";
+
+  function saveToken() {
+    token = document.getElementById("token-input").value.trim();
+    sessionStorage.setItem("admtoken", token);
+    load();
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+
+  async function load() {
+    if (!token) { show("auth"); return; }
+    const r = await fetch("/api/admin/data?token=" + encodeURIComponent(token), { cache:"no-store" });
+    if (!r.ok) { sessionStorage.removeItem("admtoken"); token=""; show("auth"); return; }
+    const { state, signups } = await r.json();
+    sessionStorage.setItem("admtoken", token);
+    show("main");
+
+    document.getElementById("csv-link").href = "/api/export.csv?token=" + encodeURIComponent(token);
+    document.getElementById("summary").textContent =
+      "Всего команд: " + state.totalTeams + " · Обновлено: " + new Date(state.updatedAt).toLocaleTimeString("ru-RU");
+
+    const cards = document.getElementById("cards");
+    cards.innerHTML = "";
+    for (const c of state.cases) {
+      const d = document.createElement("div");
+      d.className = "c";
+      d.innerHTML = "<b>" + c.id + "</b> · " + esc(c.title.slice(0,40)) + (c.title.length>40?"…":"") +
+        "<br>" + (c.full ? '<span class="full">ЗАПОЛНЕН</span> · ' : "") + c.taken + " / " + c.limit;
+      cards.appendChild(d);
+    }
+
+    const byCase = Object.fromEntries(state.cases.map((c)=>[c.id,c]));
+    const rows = document.getElementById("rows");
+    rows.innerHTML = "";
+    for (const s of signups.slice().sort((a,b)=>a.caseId.localeCompare(b.caseId)||a.createdAt.localeCompare(b.createdAt))) {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><b>" + s.caseId + "</b> " + esc((byCase[s.caseId]||{title:"?"}).title.slice(0,30)) + "…</td>" +
+        "<td>" + esc(s.team) + "</td><td>" + esc(s.captain) + "</td><td>" + esc(s.contact) + "</td>" +
+        "<td>" + new Date(s.createdAt).toLocaleString("ru-RU") + "</td>" +
+        '<td><button class="del" data-id="' + s.id + '">Удалить</button></td>';
+      tr.querySelector(".del").onclick = async (e) => {
+        if (!confirm("Удалить запись команды «" + s.team + "»? Место на кейсе освободится.")) return;
+        await fetch("/api/admin/signup/" + s.id + "?token=" + encodeURIComponent(token), { method:"DELETE" });
+        load();
+      };
+      rows.appendChild(tr);
+    }
+  }
+
+  function show(id) {
+    document.getElementById("auth").classList.toggle("hidden", id!=="auth");
+    document.getElementById("main").classList.toggle("hidden", id!=="main");
+  }
+
+  load();
+  setInterval(() => { if (token) load(); }, 10000);
+</script>
+</body>
+</html>
