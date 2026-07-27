@@ -179,6 +179,10 @@ body::before {
   border-radius: 9px; color: var(--text); padding: 11px 12px; font-size: 14px; font-family: var(--font-b);
 }
 .field input:focus { outline: none; border-color: var(--lime); }
+.field input[readonly] { color: var(--text-dim); background: rgba(0,0,0,.2); }
+.team-hint { font-family: var(--font-m); font-size: 11px; margin-top: 6px; min-height: 14px; }
+.team-hint.found { color: var(--lime); }
+.team-hint.notfound { color: var(--text-mute); }
 .mrow { display: flex; gap: 10px; margin-top: 20px; }
 .btn-ghost {
   flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-mute);
@@ -235,8 +239,13 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
     <div class="mcase" id="m-case"></div>
     <form id="form">
       <div class="field">
+        <label>Номер стола</label>
+        <input name="table" type="number" min="1" max="150" required placeholder="Например: 42" />
+      </div>
+      <div class="field">
         <label>Название команды</label>
-        <input name="team" maxlength="100" required placeholder="Например: Космические еноты" />
+        <input name="team" maxlength="100" required placeholder="Подставится по номеру стола" />
+        <div class="team-hint" id="team-hint"></div>
       </div>
       <div class="field">
         <label>Капитан (ФИО)</label>
@@ -278,7 +287,16 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
 
 <script>
   let state = null;
+  let teamByTable = {};
   const $ = (s) => document.querySelector(s);
+
+  async function loadTeams() {
+    try {
+      const r = await fetch("/api/teams", { cache: "no-store" });
+      const j = await r.json();
+      teamByTable = Object.fromEntries(j.teams.map((t) => [t.table, t.team]));
+    } catch (e) { /* форма продолжит работать без автоподстановки */ }
+  }
 
   async function load() {
     try {
@@ -358,11 +376,38 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
     $("#m-case").textContent = c.id + " · " + c.title;
     $("#msg").className = "msg";
     $("#form").reset();
+    updateTeamField();
     $("#overlay").classList.add("open");
   }
   function closeModal() { $("#overlay").classList.remove("open"); }
   $("#btn-cancel").onclick = closeModal;
   $("#overlay").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeModal(); });
+
+  function updateTeamField() {
+    const form = $("#form");
+    const table = Number.parseInt(form.table.value, 10);
+    const hint = $("#team-hint");
+    if (!table) {
+      form.team.value = "";
+      form.team.readOnly = false;
+      hint.className = "team-hint";
+      hint.textContent = "";
+      return;
+    }
+    const found = teamByTable[table];
+    if (found) {
+      form.team.value = found;
+      form.team.readOnly = true;
+      hint.className = "team-hint found";
+      hint.textContent = "Найдено в реестре ✓";
+    } else {
+      form.team.value = "";
+      form.team.readOnly = false;
+      hint.className = "team-hint notfound";
+      hint.textContent = "Стол не найден в реестре — впишите название команды вручную";
+    }
+  }
+  $("#form").table.addEventListener("input", updateTeamField);
 
   function openDetail(c) {
     const t = state.tracks.find((x) => x.id === c.track);
@@ -398,6 +443,7 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           caseId: selectedCase.id,
+          table: f.table.value,
           team: f.team.value,
           captain: f.captain.value,
           contact: f.contact.value,
@@ -422,6 +468,7 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
   });
 
   load();
+  loadTeams();
   setInterval(load, 3000);
 </script>
 </body>

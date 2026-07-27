@@ -53,7 +53,7 @@
     <div class="cards" id="cards"></div>
     <table>
       <thead>
-        <tr><th>Кейс</th><th>Команда</th><th>Капитан</th><th>Контакт</th><th>Время</th><th></th></tr>
+        <tr><th>Кейс</th><th>№ стола</th><th>Команда</th><th>Капитан</th><th>Контакт</th><th>Время</th><th></th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -97,10 +97,11 @@
     const byCase = Object.fromEntries(state.cases.map((c)=>[c.id,c]));
     const rows = document.getElementById("rows");
     rows.innerHTML = "";
-    for (const s of signups.slice().sort((a,b)=>a.caseId.localeCompare(b.caseId)||a.createdAt.localeCompare(b.createdAt))) {
+    for (const s of signups.slice().sort((a,b)=>Number(a.caseId)-Number(b.caseId)||a.createdAt.localeCompare(b.createdAt))) {
       const tr = document.createElement("tr");
       tr.innerHTML =
         "<td><b>" + s.caseId + "</b> " + esc((byCase[s.caseId]||{title:"?"}).title.slice(0,30)) + "…</td>" +
+        "<td>" + (s.table ?? "") + "</td>" +
         "<td>" + esc(s.team) + "</td><td>" + esc(s.captain) + "</td><td>" + esc(s.contact) + "</td>" +
         "<td>" + new Date(s.createdAt).toLocaleString("ru-RU") + "</td>" +
         '<td><button class="del" data-id="' + s.id + '">Удалить</button></td>';
