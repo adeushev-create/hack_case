@@ -104,12 +104,13 @@
   }
   .cell.full .c-badge { background: rgba(255,255,255,.04); border-color: #3a423a; color: #6b756b; }
   .c-title {
-    font-family: var(--font-d); font-size: clamp(8px, 0.9vw, 13px); font-weight: 600;
-    line-height: 1.25; height: calc(1.25em * 2);
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    flex: 0 0 auto; color: var(--text-dim);
+    font-family: var(--font-d); font-size: clamp(9px, 1.05vw, 15px); font-weight: 600;
+    line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    flex: 0 0 auto; color: var(--text);
     padding-right: clamp(22px, 2.8vw, 32px);
   }
+  .cell.full .c-title { color: var(--text-dim); }
   .c-nums { display: flex; align-items: baseline; gap: clamp(6px, 0.8vw, 10px); margin-top: auto; flex: 0 0 auto; }
   .c-left { font-family: var(--font-d); font-size: clamp(14px, 1.9vw, 28px); font-weight: 800; color: var(--tcolor); }
   .cell.full .c-left { color: var(--danger); }
