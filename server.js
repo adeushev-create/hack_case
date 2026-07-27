@@ -201,7 +201,13 @@ app.delete("/api/admin/signup/:id", (req, res) => {
 
 app.get("/api/export.csv", (req, res) => {
   if (!checkToken(req, res)) return;
-  const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  // Защита от CSV-инъекций: если значение начинается с =, +, -, @, tab или CR —
+  // Excel/Sheets может понять его как формулу. Экранируем ведущей кавычкой.
+  const esc = (v) => {
+    let s = String(v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const rows = [
     ["Кейс", "Название кейса", "№ стола", "Команда", "Капитан", "Контакт", "Время записи"],
     ...signups
