@@ -123,11 +123,10 @@ app.post("/api/signup", signupLimiter, (req, res) => {
   const tableRaw = req.body.table;
   const table = Number.parseInt(tableRaw, 10);
   const captain = clean(req.body.captain, 100);
-  const contact = clean(req.body.contact, 150);
   const caseId = clean(req.body.caseId, 10);
   let team = clean(req.body.team, 100);
 
-  if (!Number.isInteger(table) || table < 1 || table > 150 || !captain || !contact || !caseId) {
+  if (!Number.isInteger(table) || table < 1 || table > 150 || !captain || !caseId) {
     return res.status(400).json({ error: "Заполните все поля (номер стола от 1 до 150)." });
   }
   const c = caseById[caseId];
@@ -158,7 +157,6 @@ app.post("/api/signup", signupLimiter, (req, res) => {
     table,
     team,
     captain,
-    contact,
     createdAt: new Date().toISOString(),
   };
   signups.push(rec);
@@ -209,7 +207,7 @@ app.get("/api/export.csv", (req, res) => {
     return `"${s.replace(/"/g, '""')}"`;
   };
   const rows = [
-    ["Кейс", "Название кейса", "№ стола", "Команда", "Капитан", "Контакт", "Время записи"],
+    ["Кейс", "Название кейса", "№ стола", "Команда", "Капитан", "Время записи"],
     ...signups
       .slice()
       .sort((a, b) => Number(a.caseId) - Number(b.caseId) || a.createdAt.localeCompare(b.createdAt))
@@ -219,7 +217,6 @@ app.get("/api/export.csv", (req, res) => {
         s.table ?? "",
         s.team,
         s.captain,
-        s.contact,
         s.createdAt,
       ]),
   ];
