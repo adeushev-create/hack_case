@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Карта столов — кто на каком кейсе</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#080c08; --panel:#0f140f; --panel2:#161d16; --border:#222b21;
+    --text:#e4ece2; --text-dim:#8fa08f; --text-mute:#7d8d7d;
+    --font-d:'Unbounded','SF Pro Display',Arial,sans-serif;
+    --font-m:'SF Mono','Cascadia Code',Consolas,monospace;
+    --font-b:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-b); padding:28px; }
+  h1 { font-family:var(--font-d); font-weight:800; font-size:24px; margin-bottom:4px; }
+  .sub { color:var(--text-mute); font-size:13px; font-family:var(--font-m); margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+  .dot { width:7px; height:7px; border-radius:50%; background:#c7f54a; box-shadow:0 0 8px rgba(199,245,74,.9); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:16px; font-size:13px; }
+  .leg-item { display:flex; align-items:center; gap:6px; }
+  .leg-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .filter-btn {
+    font-family:var(--font-m); font-weight:700; font-size:13px;
+    border:1.5px solid var(--fc); color:var(--fc); background:transparent;
+    border-radius:8px; padding:7px 14px; cursor:pointer; transition:background .15s,color .15s;
+  }
+  .filter-btn:hover { background:rgba(255,255,255,.08); }
+  .filter-btn.active { background:var(--fc); color:#080c08; }
+  .map-wrap { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:10px; margin-bottom:32px; overflow:auto; }
+  svg { width:100%; height:auto; display:block; }
+  .case-lbl { font-family:var(--font-m); font-weight:700; font-size:20px; }
+  .tbl-lbl { font-family:var(--font-m); font-size:10px; opacity:.75; }
+  .tbl-lbl-empty { font-family:var(--font-m); font-size:13px; fill:var(--text-mute); }
+  .tbl { cursor:default; transition:opacity .15s; }
+  .tbl.dim { opacity:.1; }
+  .tbl.filled circle { filter:drop-shadow(0 0 4px rgba(0,0,0,.4)); }
+  .walls rect, .walls path, .walls line { fill:none; stroke:#3a453a; stroke-width:3; }
+  .wall-label { font-family:var(--font-m); font-size:13px; fill:#5a6a5a; letter-spacing:.08em; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  th,td { text-align:left; padding:9px 12px; font-size:13px; border-bottom:1px solid var(--border); }
+  th { background:var(--panel2); color:var(--text-mute); font-family:var(--font-m); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .t-num { font-family:var(--font-m); font-weight:700; }
+  .case-chip { font-family:var(--font-m); font-size:12px; font-weight:700; border:1px solid; border-radius:5px; padding:2px 7px; }
+  tbody tr.hide { display:none; }
+  footer { margin-top:20px; color:var(--text-mute); font-size:12px; font-family:var(--font-m); }
+</style>
+</head>
+<body>
+<h1>Карта столов — кто на каком кейсе</h1>
+<div class="sub"><span class="dot"></span><span id="upd">Обновлено —</span> · записано команд: <span id="total">0</span></div>
+<div class="legend" id="legend"></div>
+<div class="filter-bar" id="filters"></div>
+
+<div class="map-wrap">
+<svg viewBox="0 0 2000 1130" xmlns="http://www.w3.org/2000/svg">
+  <g class="walls">
+    <rect x="460" y="95" width="1010" height="1005" rx="4"/>
+    <rect x="630" y="190" width="250" height="420" rx="4"/>
+    <rect x="420" y="790" width="280" height="170" rx="4"/>
+    <line x1="1085" y1="95" x2="1085" y2="45"/>
+    <line x1="1335" y1="95" x2="1335" y2="45"/>
+    <line x1="1085" y1="45" x2="1335" y2="45"/>
+  </g>
+  <polygon points="345,880 385,862 385,898" fill="#5a6a5a"/>
+  <text x="330" y="925" class="wall-label" text-anchor="middle">вход</text>
+  <text x="1210" y="35" text-anchor="middle" fill="#e4ece2" font-family="Unbounded" font-weight="700" font-size="22">Сцена</text>
+  <text x="605" y="400" text-anchor="middle" fill="#c7f54a" font-family="SF Mono" font-size="13" font-weight="700" transform="rotate(-90 605 400)">МЕНТОРЫ</text>
+  <g id="tables"></g>
+</svg>
+</div>
+
+<h1 style="font-size:18px;margin-bottom:12px;">Список по столам</h1>
+<table>
+<thead><tr><th>№ стола</th><th>Кейс</th><th>Название кейса</th><th>Команда</th></tr></thead>
+<tbody id="rows"></tbody>
+</table>
+<footer>Обновляется автоматически каждые 4 секунды.</footer>
+
+<script>
+  // координаты столов (2000x1130), сняты с плана зала
+  const coords = {
+    1:[1115,117],2:[1178,117],3:[1241,117],4:[1304,117],
+    5:[1115,180],6:[1178,180],7:[1241,180],8:[1304,180],
+    109:[667,231],105:[721,275],95:[667,315],111:[721,357],106:[667,398],
+    115:[721,441],110:[667,483],119:[721,525],122:[667,567],
+    92:[784,179],93:[836,179],
+    96:[791,242],97:[854,242],102:[791,306],103:[854,306],
+    104:[791,368],114:[854,368],108:[791,431],100:[854,431],
+    98:[791,494],94:[854,494],123:[791,557],99:[854,557],
+    9:[1000,242],10:[1063,242],11:[1126,242],
+    16:[1000,306],17:[1063,306],18:[1126,306],
+    23:[1000,368],24:[1063,368],25:[1126,368],
+    32:[1126,431],
+    37:[1000,494],38:[1063,494],39:[1126,494],
+    44:[1000,557],45:[1063,557],46:[1126,557],
+    51:[1000,620],52:[1063,620],53:[1126,620],
+    58:[1000,683],59:[1063,683],60:[1126,683],
+    12:[1231,242],13:[1294,242],14:[1357,242],15:[1419,242],
+    19:[1231,306],20:[1294,306],21:[1357,306],22:[1419,306],
+    26:[1231,368],27:[1294,368],28:[1357,368],29:[1419,368],
+    33:[1231,431],34:[1294,431],35:[1357,431],36:[1419,431],
+    40:[1231,494],41:[1294,494],64:[1357,494],43:[1419,494],
+    47:[1231,557],48:[1294,557],49:[1357,557],
+    54:[1231,620],55:[1294,620],56:[1357,620],57:[1419,620],
+    61:[1231,683],62:[1294,683],63:[1357,683],
+    65:[1000,776],66:[1063,776],67:[1126,776],
+    68:[1231,776],69:[1294,776],70:[1357,776],
+    71:[1000,860],72:[1105,860],73:[1210,860],74:[1315,860],75:[1420,860],
+    76:[1000,930],78:[1105,930],80:[1210,930],81:[1315,930],82:[1420,930],
+    83:[1000,1000],84:[1105,1000],85:[1210,1000],86:[1315,1000],87:[1420,1000],
+    88:[1000,1070],89:[1105,1070],90:[1210,1070],91:[1315,1070],
+  };
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+
+  let currentFilter = "all";
+
+  function applyFilter(caseId, btn) {
+    currentFilter = caseId;
+    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    document.querySelectorAll(".tbl").forEach((el) => {
+      const match = caseId === "all" || el.dataset.case === caseId;
+      el.classList.toggle("dim", !match);
+    });
+    document.querySelectorAll("tbody tr").forEach((tr) => {
+      const match = caseId === "all" || tr.dataset.case === caseId;
+      tr.classList.toggle("hide", !match);
+    });
+  }
+  window.applyFilter = applyFilter;
+
+  async function load() {
+    try {
+      const r = await fetch("/api/seating", { cache: "no-store" });
+      const data = await r.json();
+      render(data);
+    } catch (e) { /* следующий тик починит */ }
+  }
+
+  function render(data) {
+    const trackColor = Object.fromEntries(data.tracks.map((t) => [t.id, t.color]));
+    const caseById = Object.fromEntries(data.cases.map((c) => [c.id, c]));
+    const byTable = Object.fromEntries(data.seats.map((s) => [s.table, s]));
+
+    $("#upd").textContent = "Обновлено " + new Date(data.updatedAt).toLocaleTimeString("ru-RU");
+    $("#total").textContent = data.seats.length;
+
+    $("#legend").innerHTML =
+      data.tracks.map((t) => '<span class="leg-item"><span class="leg-dot" style="background:' + t.color + '"></span>' + esc(t.name) + "</span>").join("") +
+      '<span class="leg-item"><span class="leg-dot" style="background:#161d16;border:1px solid #222b21"></span>стол свободен</span>';
+
+    const filters = $("#filters");
+    if (!filters.dataset.built) {
+      let html = '<button class="filter-btn active" data-case="all" style="--fc:#e4ece2" onclick="applyFilter(\'all\',this)">Все</button>';
+      for (const c of data.cases.slice().sort((a, b) => Number(a.id) - Number(b.id))) {
+        const color = trackColor[c.track] || "#7d8d7d";
+        html += '<button class="filter-btn" data-case="' + c.id + '" style="--fc:' + color + '" onclick="applyFilter(\'' + c.id + '\',this)" title="' + esc(c.title) + '">' + c.id + "</button>";
+      }
+      filters.innerHTML = html;
+      filters.dataset.built = "1";
+    }
+
+    const tables = $("#tables");
+    let svg = "";
+    for (const [tableStr, xy] of Object.entries(coords)) {
+      const table = Number(tableStr);
+      const [x, y] = xy;
+      const s = byTable[table];
+      const dimClass = (currentFilter !== "all" && (!s || s.caseId !== currentFilter)) ? " dim" : "";
+      if (s) {
+        const c = caseById[s.caseId];
+        const color = c ? (trackColor[c.track] || "#7d8d7d") : "#7d8d7d";
+        svg +=
+          '<g class="tbl filled' + dimClass + '" data-case="' + s.caseId + '">' +
+          '<circle cx="' + x + '" cy="' + y + '" r="26" fill="' + color + '22" stroke="' + color + '" stroke-width="2.5"/>' +
+          '<text x="' + x + '" y="' + (y - 4) + '" text-anchor="middle" class="case-lbl" fill="' + color + '">' + s.caseId + "</text>" +
+          '<text x="' + x + '" y="' + (y + 12) + '" text-anchor="middle" class="tbl-lbl" fill="' + color + '">№' + table + "</text>" +
+          "</g>";
+      } else {
+        svg +=
+          '<g class="tbl empty' + dimClass + '">' +
+          '<circle cx="' + x + '" cy="' + y + '" r="26" fill="#161d16" stroke="#222b21" stroke-width="1.5"/>' +
+          '<text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" class="tbl-lbl-empty">' + table + "</text>" +
+          "</g>";
+      }
+    }
+    tables.innerHTML = svg;
+
+    const rows = $("#rows");
+    let rowsHtml = "";
+    for (const s of data.seats.slice().sort((a, b) => a.table - b.table)) {
+      const c = caseById[s.caseId];
+      const color = c ? (trackColor[c.track] || "#7d8d7d") : "#7d8d7d";
+      const hide = currentFilter !== "all" && s.caseId !== currentFilter ? " hide" : "";
+      rowsHtml +=
+        '<tr data-case="' + s.caseId + '" class="' + hide.trim() + '">' +
+        '<td class="t-num">' + s.table + "</td>" +
+        '<td><span class="case-chip" style="color:' + color + ";border-color:" + color + "66;background:" + color + '1a">' + s.caseId + "</span></td>" +
+        "<td>" + esc(c ? c.title : "?") + "</td>" +
+        "<td>" + esc(s.team) + "</td>" +
+        "</tr>";
+    }
+    rows.innerHTML = rowsHtml;
+  }
+
+  load();
+  setInterval(load, 4000);
+</script>
+</body>
+</html>
