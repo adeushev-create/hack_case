@@ -251,10 +251,6 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
         <label>Капитан (ФИО)</label>
         <input name="captain" maxlength="100" required placeholder="Иванов Иван" />
       </div>
-      <div class="field">
-        <label>Контакт (Telegram или e-mail)</label>
-        <input name="contact" maxlength="150" required placeholder="@username или mail@example.com" />
-      </div>
       <div class="msg" id="msg"></div>
       <div class="mrow">
         <button type="button" class="btn-ghost" id="btn-cancel">Отмена</button>
@@ -446,7 +442,6 @@ footer { margin-top: 60px; color: var(--text-mute); font-size: 12px; text-align:
           table: f.table.value,
           team: f.team.value,
           captain: f.captain.value,
-          contact: f.contact.value,
         }),
       });
       const j = await r.json();
