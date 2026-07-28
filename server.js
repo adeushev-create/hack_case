@@ -118,6 +118,17 @@ app.get("/api/teams", (req, res) => {
   res.json({ teams });
 });
 
+// Карта рассадки для менторов: стол -> кейс -> команда (без капитана, без токена)
+app.get("/api/seating", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    tracks,
+    cases: cases.map((c) => ({ id: c.id, track: c.track, title: c.title })),
+    seats: signups.map((s) => ({ table: s.table, caseId: s.caseId, team: s.team })),
+    updatedAt: new Date().toISOString(),
+  });
+});
+
 // Запись команды
 app.post("/api/signup", signupLimiter, (req, res) => {
   const tableRaw = req.body.table;
@@ -232,6 +243,10 @@ app.get("/admin", (req, res) =>
 
 app.get("/board", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "board.html"))
+);
+
+app.get("/seating", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "seating.html"))
 );
 
 app.listen(PORT, () => {
